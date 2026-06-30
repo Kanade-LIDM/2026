@@ -5845,6 +5845,8 @@ async function guruLoadData() {
 
     if (window._guruSelected) window._guruSelected.clear();
     guruUpdateStats();
+    guruRender();
+    if (loading) loading.style.display = 'none';
     if (table) table.style.display = 'table';
     showToast('✅ Data ' + _guruData.length + ' siswa dimuat!', 'correct');
   } catch(e) {
