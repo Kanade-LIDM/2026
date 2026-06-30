@@ -1486,6 +1486,39 @@ body.light .guru-hdr{background:rgba(240,244,248,.97)}
 .guru-loading{text-align:center;padding:3rem;color:var(--text3);font-family:'DM Mono',monospace;font-size:.85rem}
 .guru-kanji-list{display:flex;flex-wrap:wrap;gap:5px;max-height:120px;overflow-y:auto}
 .guru-kanji-chip{background:var(--gdim);border:1px solid rgba(0,230,118,.25);border-radius:7px;padding:2px 8px;font-family:'Noto Serif JP',serif;font-size:1.1rem;color:var(--green)}
+.guru-hdr-actions{margin-left:auto;display:flex;gap:8px;align-items:center}
+/* ===== RESPONSIVE: DASHBOARD GURU DI MOBILE ===== */
+@media(max-width:680px){
+  .guru-hdr{flex-wrap:wrap;padding:.6rem .8rem;gap:6px}
+  .guru-hdr-actions{margin-left:0;width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:2px;scrollbar-width:thin}
+  .guru-hdr-actions::-webkit-scrollbar{height:3px}
+  .guru-hdr-actions .guru-refresh-btn,.guru-hdr-actions .guru-btn-export{flex-shrink:0;font-size:.7rem;padding:.5rem .8rem}
+  .guru-body{padding:.8rem}
+  .guru-stat-row{gap:.5rem;margin-bottom:.9rem}
+  .guru-stat{padding:.7rem .8rem;border-radius:12px}
+  .guru-stat-ico{font-size:1.1rem;margin-bottom:.2rem}
+  .guru-stat-val{font-size:1.25rem}
+  .guru-stat-lbl{font-size:.6rem}
+  .guru-search{max-width:100%;font-size:.8rem}
+  .guru-sort-row{overflow-x:auto;-webkit-overflow-scrolling:touch;flex-wrap:nowrap;padding-bottom:2px}
+  .guru-sort-btn{flex-shrink:0}
+  .guru-table-wrap{-webkit-overflow-scrolling:touch;border-radius:12px}
+  .guru-table{min-width:560px}
+  .guru-table th,.guru-table td{padding:.5rem .6rem;font-size:.75rem}
+  .guru-table th input[type="checkbox"],.guru-table td input[type="checkbox"]{width:18px;height:18px}
+  .guru-mini-bar{width:50px}
+  .guru-modal-ov{padding:.6rem;align-items:flex-end}
+  .guru-modal-box{padding:1rem;border-radius:16px 16px 0 0;max-height:90vh;width:100%;max-width:100%}
+  .guru-modal-grid{gap:.5rem}
+  .guru-modal-card{padding:.65rem}
+  .guru-modal-card-val{font-size:1.1rem}
+  .guru-modal-name{font-size:1.05rem}
+}
+@media(max-width:380px){
+  .guru-stat-row{grid-template-columns:repeat(2,1fr)}
+  .guru-stat-val{font-size:1.1rem}
+  .guru-hdr-actions .guru-refresh-btn,.guru-hdr-actions .guru-btn-export{font-size:.65rem;padding:.45rem .65rem}
+}
 /* ===== END DASHBOARD GURU ===== */
 </style>
 </head>
@@ -5230,6 +5263,14 @@ var MOKO_STEPS = [
 
 var mokoStepIdx = 0;
 var MOKO_KEY = 'km_moko_tutorial_done';
+// Status tutorial disimpan PER AKUN (per NIM), bukan global per perangkat —
+// agar di perangkat yang dipakai bergantian (mis. lab komputer sekolah),
+// setiap siswa baru tetap melihat tutorial saat pertama kali login,
+// meskipun siswa lain sebelumnya sudah pernah menyelesaikan/menutupnya.
+function mokoStorageKey() {
+  var uid = (typeof currentUser !== 'undefined' && currentUser) ? currentUser : 'anon';
+  return MOKO_KEY + '_' + uid;
+}
 
 function mokoStart() {
   // Paksa light mode saat tutorial aktif agar elemen lebih jelas terlihat
@@ -5479,7 +5520,7 @@ function mokoFinish() {
   if (chapterOvEl && !chapterOvEl.classList.contains('hidden')) {
     chapterOvEl.classList.add('hidden');
   }
-  localStorage.setItem('km_moko_tutorial_done', '1');
+  localStorage.setItem(mokoStorageKey(), '1');
 }
 
 function mokoReplay() {
@@ -5496,7 +5537,7 @@ window.addEventListener('resize', function() {
 });
 
 function mokoCheckFirstLogin() {
-  if (!localStorage.getItem('km_moko_tutorial_done')) {
+  if (!localStorage.getItem(mokoStorageKey())) {
     setTimeout(function() { mokoStart(); }, 600);
   }
 }
@@ -6179,7 +6220,7 @@ function guruExportCSV() {
       <div class="guru-logo">KANADE</div>
       <div class="guru-title">🎓 Dashboard Guru — <span id="guru-name-hdr">—</span></div>
     </div>
-    <div style="margin-left:auto;display:flex;gap:8px;align-items:center">
+    <div class="guru-hdr-actions">
       <button class="guru-refresh-btn" onclick="guruLoadData()">🔄 Refresh</button>
       <button class="guru-btn-export" onclick="guruExportCSV()">📥 Export CSV</button>
       <button class="guru-btn-export" id="guru-btn-delete-selected" onclick="guruDeleteSelected()" style="display:none;border-color:var(--red);color:var(--red)">🗑️ Hapus Terpilih (<span id="guru-selected-count">0</span>)</button>
