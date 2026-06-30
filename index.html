@@ -2545,7 +2545,7 @@ var MAHASISWA = {
 
 // ===== DAFTAR GURU =====
 // Login sebagai guru memerlukan kombinasi NAMA + NIM berikut (sandi bebas)
-var GURU_NIM  = '2351110600111014';
+var GURU_NIM  = '235110600111014';
 var GURU_NAMA = 'AGUS HERU KUSWANTO';
 function isGuru(nim) { return String(nim).trim() === GURU_NIM; }
 // ===========================
@@ -2598,7 +2598,8 @@ function doAuth() {
   var key = nim;
   // Cek apakah NIM ini adalah NIM guru
   if (isGuru(nim)) {
-    if (nama.toUpperCase() !== GURU_NAMA) {
+    var namaNormalized = nama.toUpperCase().replace(/\s+/g, ' ').trim();
+    if (namaNormalized !== GURU_NAMA) {
       showLoginError('⚠️ Nama tidak sesuai untuk akun guru ini');
       return;
     }
@@ -2672,7 +2673,7 @@ function execLogout() {
   var lmsNav = document.getElementById('lms-nav');
   if (lmsNav) lmsNav.style.display = 'none';
   var bnav = document.getElementById('bottom-nav');
-  if (bnav) bnav.classList.remove('logged-in');
+  if (bnav) { bnav.classList.remove('logged-in'); bnav.style.display = ''; }
   document.getElementById('reg-ov').style.display = 'flex';
   var mokoEl = document.getElementById('moko-wrap');
   if (mokoEl) mokoEl.remove();
@@ -5812,6 +5813,8 @@ function guruLogout() {
   localStorage.removeItem('km_guru_mode');
   document.getElementById('guru-dashboard').classList.remove('active');
   document.getElementById('reg-ov').style.display = 'flex';
+  var bnav = document.getElementById('bottom-nav');
+  if (bnav) { bnav.classList.remove('logged-in'); bnav.style.display = ''; }
   _guruData = [];
 }
 
