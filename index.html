@@ -35,7 +35,7 @@
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
   import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-  import { getFirestore, doc, getDoc, setDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+  import { getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyCw8geGKM4-dVEEfq_3DulaoKe2NEHBfLg",
@@ -54,7 +54,7 @@
   // Expose ke global agar fungsi lain bisa akses
   window._fbAuth = auth;
   window._fbDb = db;
-  window._fbFns = { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, doc, getDoc, setDoc, updateDoc };
+  window._fbFns = { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, doc, getDoc, setDoc, updateDoc, deleteDoc };
 </script>
 <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&family=Noto+Sans+JP:wght@300;400;500;700&family=Noto+Serif+JP:wght@400;700&family=DM+Mono:wght@400;500&display=swap" onload="this.onload=null;this.rel='stylesheet'">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&family=Noto+Sans+JP:wght@300;400;500;700&family=Noto+Serif+JP:wght@400;700&family=DM+Mono:wght@400;500&display=swap" media="print" onload="this.media='all'">
@@ -5843,9 +5843,8 @@ async function guruLoadData() {
       }
     });
 
+    if (window._guruSelected) window._guruSelected.clear();
     guruUpdateStats();
-    guruRender();
-    if (loading) loading.style.display = 'none';
     if (table) table.style.display = 'table';
     showToast('✅ Data ' + _guruData.length + ' siswa dimuat!', 'correct');
   } catch(e) {
@@ -5909,7 +5908,8 @@ function guruRender() {
   var tbody = document.getElementById('guru-tbody');
   if (!tbody) return;
   if (list.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--text3);padding:2rem">Tidak ada data siswa ditemukan</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--text3);padding:2rem">Tidak ada data siswa ditemukan</td></tr>';
+    guruUpdateBulkBar();
     return;
   }
   var totalKanji = typeof KD !== 'undefined' ? KD.length : 1;
@@ -5923,7 +5923,9 @@ function guruRender() {
       var loginLog = d.logs.find(function(l) { return l.type === 'login'; });
       if (loginLog) lastLogin = loginLog.time || '—';
     }
+    var checked = _guruSelected.has(d._nim) ? 'checked' : '';
     return '<tr onclick="guruShowDetail(\'' + d._nim + '\')">'
+      + '<td onclick="event.stopPropagation()"><input type="checkbox" ' + checked + ' onclick="guruToggleSelect(\'' + d._nim + '\',this.checked)"></td>'
       + '<td style="color:var(--text3);font-family:DM Mono,monospace">' + (i+1) + '</td>'
       + '<td style="font-weight:600">' + (d.nama || d._nim) + '</td>'
       + '<td style="font-family:DM Mono,monospace;font-size:.72rem;color:var(--text3)">' + d._nim + '</td>'
@@ -5934,6 +5936,91 @@ function guruRender() {
       + '<td style="font-size:.72rem;color:var(--text3)">' + lastLogin + '</td>'
       + '</tr>';
   }).join('');
+  guruUpdateBulkBar();
+}
+
+var _guruSelected = window._guruSelected || (window._guruSelected = new Set());
+
+function guruToggleSelect(nim, checked) {
+  if (checked) { _guruSelected.add(nim); } else { _guruSelected.delete(nim); }
+  guruUpdateBulkBar();
+}
+
+function guruToggleSelectAll(checked) {
+  var checkboxes = document.querySelectorAll('#guru-tbody input[type="checkbox"]');
+  checkboxes.forEach(function(cb) {
+    cb.checked = checked;
+    var tr = cb.closest('tr');
+    var nimCell = tr ? tr.querySelector('td:nth-child(4)') : null;
+    if (nimCell) {
+      var nim = nimCell.textContent.trim();
+      if (checked) { _guruSelected.add(nim); } else { _guruSelected.delete(nim); }
+    }
+  });
+  guruUpdateBulkBar();
+}
+
+function guruUpdateBulkBar() {
+  var btn = document.getElementById('guru-btn-delete-selected');
+  var countEl = document.getElementById('guru-selected-count');
+  if (!btn || !countEl) return;
+  var n = _guruSelected.size;
+  countEl.textContent = n;
+  btn.style.display = n > 0 ? 'inline-flex' : 'none';
+  var selectAllCb = document.getElementById('guru-select-all');
+  if (selectAllCb) {
+    var rowsCbs = document.querySelectorAll('#guru-tbody input[type="checkbox"]');
+    var allChecked = rowsCbs.length > 0 && Array.prototype.every.call(rowsCbs, function(cb){ return cb.checked; });
+    selectAllCb.checked = allChecked;
+  }
+}
+
+function guruDeleteSelected() {
+  var nims = Array.from(_guruSelected);
+  if (nims.length === 0) return;
+  var names = nims.map(function(nim) {
+    var d = _guruData.find(function(x) { return x._nim === nim; });
+    return d ? (d.nama || nim) : nim;
+  });
+  kmConfirm({
+    icon: '🗑️',
+    title: 'Hapus ' + nims.length + ' akun siswa terpilih?',
+    desc: 'Akun berikut akan dihapus permanen dari cloud beserta progres, XP, dan riwayat belajarnya, dan tidak bisa dikembalikan: ' + names.join(', '),
+    okText: 'Hapus Permanen',
+    cancelText: 'Batal',
+    onOk: function() { guruDeleteSelectedConfirmed(nims); }
+  });
+}
+
+async function guruDeleteSelectedConfirmed(nims) {
+  if (!window._fbDb || !window._fbFns || !window._fbFns.deleteDoc) {
+    showToast('⚠️ Koneksi ke Firestore gagal, tidak bisa menghapus.', 'wrong-t');
+    return;
+  }
+  var { doc, deleteDoc } = window._fbFns;
+  var users = loadUsers();
+  var okCount = 0, failCount = 0;
+  for (var i = 0; i < nims.length; i++) {
+    var nim = nims[i];
+    try {
+      await deleteDoc(doc(window._fbDb, 'users', nim));
+      if (users[nim]) { delete users[nim]; }
+      _guruData = _guruData.filter(function(x) { return x._nim !== nim; });
+      _guruSelected.delete(nim);
+      okCount++;
+    } catch (e) {
+      console.error('Guru bulk delete error for ' + nim + ':', e);
+      failCount++;
+    }
+  }
+  saveUsers(users);
+  guruUpdateStats();
+  guruRender();
+  if (failCount === 0) {
+    showToast('🗑️ ' + okCount + ' akun berhasil dihapus', 'correct');
+  } else {
+    showToast('⚠️ ' + okCount + ' berhasil, ' + failCount + ' gagal dihapus', 'wrong-t');
+  }
 }
 
 function guruShowDetail(nim) {
@@ -5961,7 +6048,10 @@ function guruShowDetail(nim) {
 
   var html = '<div style="display:flex;justify-content:space-between;align-items:flex-start">'
     + '<div><div class="guru-modal-name">' + (d.nama||nim) + '</div><div class="guru-modal-nim">NIM: ' + nim + '</div></div>'
+    + '<div style="display:flex;gap:6px;align-items:flex-start">'
+    + '<button onclick="guruDeleteStudent(\'' + nim + '\')" title="Hapus akun siswa ini" style="background:var(--rdim);border:1px solid rgba(255,82,82,.35);color:var(--red);font-size:.7rem;cursor:pointer;padding:5px 10px;border-radius:8px;font-family:DM Mono,monospace;white-space:nowrap">🗑️ Hapus</button>'
     + '<button onclick="document.getElementById(\'guru-modal\').style.display=\'none\'" style="background:transparent;border:none;color:var(--text3);font-size:1.2rem;cursor:pointer;padding:2px 6px">✕</button>'
+    + '</div>'
     + '</div>'
     + '<div class="guru-modal-grid">'
     + '<div class="guru-modal-card"><div class="guru-modal-card-val">' + totalXP + '</div><div class="guru-modal-card-lbl">Total XP</div></div>'
@@ -5984,6 +6074,42 @@ function guruShowDetail(nim) {
 
   document.getElementById('guru-modal-box').innerHTML = html;
   document.getElementById('guru-modal').style.display = 'flex';
+}
+
+function guruDeleteStudent(nim) {
+  var d = _guruData.find(function(x) { return x._nim === nim; });
+  var nama = d ? (d.nama || nim) : nim;
+  kmConfirm({
+    icon: '🗑️',
+    title: 'Hapus akun ' + nama + '?',
+    desc: 'Semua progres, XP, dan riwayat belajar siswa ini akan dihapus permanen dari cloud dan tidak bisa dikembalikan. NIM: ' + nim,
+    okText: 'Hapus Permanen',
+    cancelText: 'Batal',
+    onOk: function() { guruDeleteStudentConfirmed(nim); }
+  });
+}
+
+async function guruDeleteStudentConfirmed(nim) {
+  try {
+    if (!window._fbDb || !window._fbFns || !window._fbFns.deleteDoc) {
+      showToast('⚠️ Koneksi ke Firestore gagal, tidak bisa menghapus.', 'wrong-t');
+      return;
+    }
+    var { doc, deleteDoc } = window._fbFns;
+    await deleteDoc(doc(window._fbDb, 'users', nim));
+    // Hapus juga dari salinan lokal browser ini (jika ada)
+    var users = loadUsers();
+    if (users[nim]) { delete users[nim]; saveUsers(users); }
+    // Hapus dari data tabel guru & tutup modal
+    _guruData = _guruData.filter(function(x) { return x._nim !== nim; });
+    document.getElementById('guru-modal').style.display = 'none';
+    guruUpdateStats();
+    guruRender();
+    showToast('🗑️ Akun ' + nim + ' berhasil dihapus', 'correct');
+  } catch (e) {
+    console.error('Guru delete error:', e);
+    showToast('⚠️ Gagal menghapus: ' + e.message, 'wrong-t');
+  }
 }
 
 function guruExportCSV() {
@@ -6054,6 +6180,7 @@ function guruExportCSV() {
     <div style="margin-left:auto;display:flex;gap:8px;align-items:center">
       <button class="guru-refresh-btn" onclick="guruLoadData()">🔄 Refresh</button>
       <button class="guru-btn-export" onclick="guruExportCSV()">📥 Export CSV</button>
+      <button class="guru-btn-export" id="guru-btn-delete-selected" onclick="guruDeleteSelected()" style="display:none;border-color:var(--red);color:var(--red)">🗑️ Hapus Terpilih (<span id="guru-selected-count">0</span>)</button>
       <button class="guru-btn-export" onclick="guruLogout()" style="border-color:var(--red);color:var(--red)">Keluar</button>
     </div>
   </div>
@@ -6082,6 +6209,7 @@ function guruExportCSV() {
       <table class="guru-table" id="guru-table" style="display:none">
         <thead>
           <tr>
+            <th style="width:32px"><input type="checkbox" id="guru-select-all" onclick="guruToggleSelectAll(this.checked)" title="Pilih semua"></th>
             <th>#</th>
             <th>Nama</th>
             <th>NIM</th>
