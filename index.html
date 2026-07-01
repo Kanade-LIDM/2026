@@ -1448,7 +1448,7 @@ body.light .guru-hdr{background:rgba(240,244,248,.97)}
 .guru-stat-val{font-family:'Outfit',sans-serif;font-weight:800;font-size:1.6rem;color:var(--cyan)}
 .guru-stat-lbl{font-size:.65rem;color:var(--text3);font-family:'DM Mono',monospace;text-transform:uppercase;letter-spacing:.07em}
 .guru-section-title{font-size:.68rem;color:var(--text3);text-transform:uppercase;letter-spacing:.1em;font-family:'DM Mono',monospace;margin-bottom:.7rem;margin-top:1.2rem}
-.guru-table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;overflow-x:auto}
+.guru-table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow-x:auto}
 .guru-table{width:100%;border-collapse:collapse;min-width:600px}
 .guru-table th{background:var(--bg3);padding:.6rem .9rem;text-align:left;font-size:.68rem;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);font-family:'DM Mono',monospace;border-bottom:1px solid var(--border);white-space:nowrap}
 .guru-table td{padding:.65rem .9rem;border-bottom:1px solid var(--border);font-size:.82rem;color:var(--text);vertical-align:middle}
@@ -2622,21 +2622,25 @@ function doAuth() {
   if (!nim)   { showLoginError('⚠️ NIM tidak boleh kosong'); return; }
   if (!sandi) { showLoginError('⚠️ Sandi tidak boleh kosong'); return; }
 
-  // Sementara: semua NIM + sandi apapun bisa masuk
-  // TODO: aktifkan validasi sandi resmi di sini nanti
-  var registered = MAHASISWA[nim] || nama;
+  // Validasi NIM + Nama harus cocok dengan daftar resmi
+  var namaNormalized = nama.toUpperCase().replace(/\s+/g, ' ').trim();
+  var registered = MAHASISWA[nim];
 
-  // NIM+Sandi valid — coba load dari cloud dulu, fallback ke lokal
+  if (!registered) {
+    showLoginError('\u26a0\ufe0f NIM tidak terdaftar. Hubungi dosen jika ada kesalahan.');
+    return;
+  }
+  if (namaNormalized !== registered.toUpperCase().trim()) {
+    showLoginError('\u26a0\ufe0f Nama tidak sesuai dengan NIM yang dimasukkan. Periksa kembali nama Anda.');
+    return;
+  }
+
+  // NIM+Nama valid — coba load dari cloud dulu, fallback ke lokal
   var users = loadUsers();
   var key = nim;
-  // Cek apakah NIM ini adalah NIM guru
+  // Cek apakah NIM ini adalah NIM guru (nama sudah divalidasi di atas)
   if (isGuru(nim)) {
-    var namaNormalized = nama.toUpperCase().replace(/\s+/g, ' ').trim();
-    if (namaNormalized !== GURU_NAMA) {
-      showLoginError('⚠️ Nama tidak sesuai untuk akun guru ini');
-      return;
-    }
-    applyGuruLogin(nim, nama || registered);
+    applyGuruLogin(nim, registered);
     return;
   }
 
@@ -4694,6 +4698,9 @@ function startCurrentChapterTest() {
 }
 
 function openChapterSelect() {
+  // Redam ghost-click mobile: abaikan jika dipanggil sesaat (<500ms) setelah tutorial Moko-chan selesai,
+  // karena tombol "Selesai ✓" posisinya dekat bottom-nav dan klik sintetis bisa menembus ke tombol di belakangnya.
+  if (Date.now() - mokoFinishedAt < 500) return;
   buildChapterGrid();
   document.getElementById('chapter-ov').classList.remove('hidden');
   // Tutup mobile sidebar jika sedang terbuka (hindari tumpang tindih overlay)
@@ -5262,6 +5269,7 @@ var MOKO_STEPS = [
 ];
 
 var mokoStepIdx = 0;
+var mokoFinishedAt = 0; // timestamp mokoFinish() terakhir — dipakai utk meredam ghost-click mobile
 var MOKO_KEY = 'km_moko_tutorial_done';
 // Status tutorial disimpan PER AKUN (per NIM), bukan global per perangkat —
 // agar di perangkat yang dipakai bergantian (mis. lab komputer sekolah),
@@ -5521,6 +5529,10 @@ function mokoFinish() {
     chapterOvEl.classList.add('hidden');
   }
   localStorage.setItem(mokoStorageKey(), '1');
+  // Tandai waktu selesai — dipakai openChapterSelect() utk meredam ghost-click mobile
+  // (tap "Selesai ✓" yang posisinya dekat bottom-nav kadang memicu klik sintetis
+  // pada tombol di belakangnya begitu kartu tutorial dihapus dari DOM)
+  mokoFinishedAt = Date.now();
 }
 
 function mokoReplay() {
