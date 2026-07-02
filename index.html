@@ -2684,12 +2684,10 @@ function doAuth() {
     return;
   }
 
-  // Validasi NIM siswa — harus ada di daftar MAHASISWA. Nama diambil otomatis dari NIM.
-  var registered = MAHASISWA[nim];
-  if (!registered) {
-    showLoginError('\u26a0\ufe0f NIM tidak terdaftar. Hubungi dosen jika ada kesalahan.');
-    return;
-  }
+  // Validasi NIM siswa. Boleh masuk kalau: (a) ada di daftar MAHASISWA lokal,
+  // ATAU (b) sudah punya data tersimpan di Firestore (mis. ditambahkan manual oleh guru
+  // lewat dashboard/alat seed, meski belum dimasukkan ke daftar MAHASISWA di kode ini).
+  var registered = MAHASISWA[nim]; // nama dari whitelist lokal — boleh undefined
 
   // NIM valid — coba load dari cloud dulu, fallback ke lokal
   var users = loadUsers();
@@ -2697,7 +2695,7 @@ function doAuth() {
 
   loadProgressFromCloud(key).then(function(cloudData) {
     if (cloudData) {
-      // Gabungkan: cloud lebih prioritas
+      // Ada data di Firestore (baik terdaftar di whitelist lokal maupun tidak) — boleh masuk
       users[key] = cloudData;
       saveUsers(users);
       // Sinkronkan hasil tes bab dari cloud ke penyimpanan lokal
@@ -2709,13 +2707,20 @@ function doAuth() {
         localStorage.setItem(MOKO_KEY + '_' + key, '1');
       }
       showToast('☁️ Progres dimuat dari cloud!', 'correct');
-    } else if (!users[key]) {
-      users[key] = { nim: nim, nama: registered, xp: 0, level: 1, streak: 0, correct: 0, score: 0, mastered: [], srs: {}, logs: [], created: new Date().toISOString() };
-      saveUsers(users);
-      showToast('🎉 Selamat datang, ' + registered + '!', 'correct');
-      confetti();
+    } else if (registered) {
+      // Tidak ada di cloud, tapi terdaftar di whitelist lokal — buat akun baru
+      if (!users[key]) {
+        users[key] = { nim: nim, nama: registered, xp: 0, level: 1, streak: 0, correct: 0, score: 0, mastered: [], srs: {}, logs: [], created: new Date().toISOString() };
+        saveUsers(users);
+        showToast('🎉 Selamat datang, ' + registered + '!', 'correct');
+        confetti();
+      } else {
+        showToast('👋 Selamat datang kembali, ' + (users[key].nama || registered) + '!', 'correct');
+      }
     } else {
-      showToast('👋 Selamat datang kembali, ' + (users[key].nama || registered) + '!', 'correct');
+      // Tidak ada di whitelist lokal DAN tidak ada di cloud — benar-benar belum terdaftar
+      showLoginError('\u26a0\ufe0f NIM tidak terdaftar. Hubungi dosen jika ada kesalahan.');
+      return;
     }
     applyLogin(nim, users[key]);
     var _isNew = !users[key].logs || users[key].logs.length === 0;
