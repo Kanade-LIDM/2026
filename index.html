@@ -2622,27 +2622,34 @@ function doAuth() {
   if (!nim)   { showLoginError('⚠️ NIM tidak boleh kosong'); return; }
   if (!sandi) { showLoginError('⚠️ Sandi tidak boleh kosong'); return; }
 
-  // Validasi NIM + Nama harus cocok dengan daftar resmi
-  var namaNormalized = nama.toUpperCase().replace(/\s+/g, ' ').trim();
-  var registered = MAHASISWA[nim];
+  // Cek guru dulu sebelum validasi daftar mahasiswa
+  if (isGuru(nim)) {
+    var namaGuruNorm = nama.toUpperCase().replace(/\s+/g, ' ').trim();
+    if (namaGuruNorm !== GURU_NAMA) {
+      showLoginError('\u26a0\ufe0f Nama tidak sesuai untuk akun guru ini.');
+      return;
+    }
+    applyGuruLogin(nim, nama);
+    return;
+  }
 
+  // Validasi NIM siswa — harus ada di daftar MAHASISWA
+  var registered = MAHASISWA[nim];
   if (!registered) {
     showLoginError('\u26a0\ufe0f NIM tidak terdaftar. Hubungi dosen jika ada kesalahan.');
     return;
   }
-  if (namaNormalized !== registered.toUpperCase().trim()) {
+
+  // Validasi Nama harus cocok dengan NIM (tidak peka huruf kapital & spasi ganda)
+  var namaNormalized = nama.toUpperCase().replace(/\s+/g, ' ').trim();
+  if (namaNormalized !== registered.toUpperCase().replace(/\s+/g, ' ').trim()) {
     showLoginError('\u26a0\ufe0f Nama tidak sesuai dengan NIM yang dimasukkan. Periksa kembali nama Anda.');
     return;
   }
 
-  // NIM+Nama valid — coba load dari cloud dulu, fallback ke lokal
+  // NIM + Nama valid — coba load dari cloud dulu, fallback ke lokal
   var users = loadUsers();
   var key = nim;
-  // Cek apakah NIM ini adalah NIM guru (nama sudah divalidasi di atas)
-  if (isGuru(nim)) {
-    applyGuruLogin(nim, registered);
-    return;
-  }
 
   loadProgressFromCloud(key).then(function(cloudData) {
     if (cloudData) {
