@@ -1068,12 +1068,12 @@ body.moko-active {
 /* Matikan semua animasi & transisi CSS pada elemen halaman biasa selama tutorial aktif.
    Ini mencegah posisi elemen yang sedang dijelaskan tergeser (mis. karena transisi fade/slide)
    dari posisi yang sudah diukur & dipakai untuk menggambar sorotan (spotlight). */
-body.moko-active *:not(#moko-wrap):not(#moko-wrap *):not(#moko-dim-overlay):not(#moko-spotlight) {
+body.moko-active *:not(#moko-wrap):not(#moko-wrap *):not(#moko-dim-overlay):not(.moko-spotlight) {
   transition: none !important;
   animation: none !important;
 }
 /* Semua elemen tidak bisa diklik saat tutorial, kecuali wrap tutorial itu sendiri */
-body.moko-active > *:not(#moko-wrap):not(#moko-dim-overlay):not(#moko-spotlight):not(#moko-active-target):not(#chapter-ov) {
+body.moko-active > *:not(#moko-wrap):not(#moko-dim-overlay):not(.moko-spotlight):not(.moko-active-target):not(#chapter-ov) {
   pointer-events: none !important;
 }
 /* Modal Bab (chapter-ov) tetap bisa ditutup walau tutorial sedang aktif */
@@ -1084,8 +1084,8 @@ body.moko-active #chapter-ov, body.moko-active #chapter-ov * {
 body.moko-active .more-menu.open {
   z-index: 9982 !important;
 }
-/* Elemen target tetap tidak bisa diklik (hanya ditampilkan) */
-body.moko-active #moko-active-target {
+/* Elemen target tetap tidak bisa diklik (hanya ditampilkan) — bisa lebih dari satu elemen sekaligus */
+body.moko-active .moko-active-target {
   pointer-events: none !important;
   cursor: default !important;
 }
@@ -2825,8 +2825,8 @@ function execLogout() {
   if (mokoEl) mokoEl.remove();
   var mokoDim = document.getElementById('moko-dim-overlay');
   if (mokoDim) mokoDim.remove();
-  var mokoSpot = document.getElementById('moko-spotlight');
-  if (mokoSpot) mokoSpot.remove();
+  var mokoSpots = document.querySelectorAll('.moko-spotlight');
+  for (var msi = 0; msi < mokoSpots.length; msi++) mokoSpots[msi].remove();
   showToast('👋 Sampai jumpa!', 'xp');
 }
 
@@ -5402,11 +5402,11 @@ var MOKO_STEPS = [
   { tag: '1/9 · Materi', text: 'Ini halaman Materi — di sini kamu bisa lihat detail tiap kanji: cara baca, arti, animasi urutan goresan, petunjuk hafalan visual, dan naritachi (asal-usul kanji). Semua dalam satu halaman!', tab: 'detail', target: '#panel-detail .dh', mobileAction: 'closeSidebar' },
   { tag: '2/9 · Daftar Bab', text: 'Di samping kiri ada daftar Bab. Perhatikan: bab dipelajari secara BERURUTAN 📖\n\nBab berikutnya baru terbuka setelah kamu lulus Kuis Bab sebelumnya dengan nilai minimal 75%.', tab: 'detail', target: '.ksb', mobileAction: 'openSidebar' },
   { tag: '3/9 · Navigasi Kanji', text: 'Pakai tombol "Kembali" dan "Selanjutnya" di pojok kanan atas untuk berpindah ke kanji sebelumnya atau berikutnya dalam bab yang sama.', tab: 'detail', target: '#dh-nav-bar', mobileAction: 'closeSidebar' },
-  { tag: '4/9 · Flashcard', text: 'Mode Flashcard cocok untuk menghafal cepat — lihat kanji, tebak artinya, lalu balik kartu dan tandai "Belum Hafal" atau "Sudah Hafal" sesuai kemampuanmu!', tab: 'flashcard', target: '#panel-flashcard' },
-  { tag: '5/9 · Latihan', text: 'Di sini kamu diuji lewat kuis pilihan ganda. Ada 5 jenis soal: Cara Baca, Arti, Tebak Kanji, Kosakata, dan Isian Kalimat. Selamat berlatih!', tab: 'quiz', target: '#panel-quiz' },
-  { tag: '6/9 · Kuis Bab', text: '🏆 Kuis Bab adalah tes resmi per bab — kamu perlu mendapat nilai MINIMAL 75% untuk membuka bab berikutnya.\n\nAkses lewat tombol "Kuis Bab" di menu Lainnya.', tab: 'detail', target: '#more-kuisbab-btn', mobileAction: 'openMoreMenu' },
-  { tag: '7/9 · Papan Tulis', text: 'Coba tulis kanji-nya sendiri di papan ini! Aku akan menilai jumlah goresan, arah, posisi, urutan, dan kelancaran tulisanmu. Lihat animasi goresan di tab Materi sebagai panduan.', tab: 'draw', target: '#panel-draw' },
-  { tag: '8/9 · Progres & Lainnya', text: 'Menu Lainnya berisi: Progres belajarmu, Daftar lengkap kanji, Kuis Bab, dan Pengaturan aplikasi.\n\nPantau terus perkembangan belajarmu di sini!', tab: 'lms', target: '#panel-lms' },
+  { tag: '4/9 · Flashcard', text: 'Mode Flashcard cocok untuk menghafal cepat — lihat kanji, tebak artinya, lalu balik kartu dan tandai "Belum Hafal" atau "Sudah Hafal" sesuai kemampuanmu!\n\nTekan tombol "Flashcard" di navigasi bawah untuk membuka mode ini.', tab: 'flashcard', target: ['#bnav-flashcard', '#panel-flashcard'] },
+  { tag: '5/9 · Latihan', text: 'Di sini kamu diuji lewat kuis pilihan ganda. Ada 5 jenis soal: Cara Baca, Arti, Tebak Kanji, Kosakata, dan Isian Kalimat. Selamat berlatih!\n\nTekan tombol "Latihan" di navigasi bawah untuk membuka mode ini.', tab: 'quiz', target: ['#bnav-quiz', '#panel-quiz'] },
+  { tag: '6/9 · Kuis Bab', text: '🏆 Kuis Bab adalah tes resmi per bab — kamu perlu mendapat nilai MINIMAL 75% untuk membuka bab berikutnya.\n\nAkses lewat tombol "Kuis Bab" di menu Lainnya.', tab: 'detail', target: ['#bnav-more', '#more-kuisbab-btn'], mobileAction: 'openMoreMenu' },
+  { tag: '7/9 · Papan Tulis', text: 'Coba tulis kanji-nya sendiri di papan ini! Aku akan menilai jumlah goresan, arah, posisi, urutan, dan kelancaran tulisanmu. Lihat animasi goresan di tab Materi sebagai panduan.\n\nTekan tombol "Menulis" di navigasi bawah untuk membuka mode ini.', tab: 'draw', target: ['#bnav-draw', '#panel-draw'] },
+  { tag: '8/9 · Progres & Lainnya', text: 'Menu Lainnya berisi: Progres belajarmu, Daftar lengkap kanji, Kuis Bab, dan Pengaturan aplikasi.\n\nPantau terus perkembangan belajarmu di sini! Akses lewat tombol "Progres" di menu Lainnya.', tab: 'lms', target: ['#bnav-more', '#lms-nav'], mobileAction: 'openMoreMenu' },
   { tag: 'Selesai!', text: 'Sip, itu semua fitur utamanya! Ingat: belajar berurutan dari Bab 1, lulus kuis minimal 75% untuk maju ke bab berikutnya. Ganbatte! 💪🦊', tab: null, target: null, mobileAction: 'closeSidebar' }
 ];
 
@@ -5448,8 +5448,8 @@ function mokoRender() {
   if (oldWrap) oldWrap.remove();
   var oldDim = document.getElementById('moko-dim-overlay');
   if (oldDim) oldDim.remove();
-  var oldSpot = document.getElementById('moko-spotlight');
-  if (oldSpot) oldSpot.remove();
+  var oldSpots = document.querySelectorAll('.moko-spotlight');
+  for (var osi = 0; osi < oldSpots.length; osi++) oldSpots[osi].remove();
 
   var step = MOKO_STEPS[mokoStepIdx];
   if (!step) { mokoFinish(); return; }
@@ -5495,8 +5495,9 @@ function mokoRender() {
     if (moreMenuEl) moreMenuEl.classList.remove('open');
     if (bnavMoreEl) { bnavMoreEl.classList.remove('active'); bnavMoreEl.setAttribute('aria-expanded', 'false'); }
   }
-  // Khusus step yang target-nya .ksb: tampilkan sidebar
-  if (step.target === '.ksb') {
+  // Khusus step yang salah satu target-nya .ksb: tampilkan sidebar
+  var _tgtSels = mokoTargetSelectors(step);
+  if (_tgtSels.indexOf('.ksb') !== -1) {
     document.body.classList.remove('moko-hide-sidebar');
   }
 
@@ -5520,34 +5521,44 @@ function mokoRender() {
   }, sidebarAnimDelay + 80);
 }
 
+// step.target boleh string (1 elemen) ATAU array of string (banyak elemen disorot sekaligus,
+// mis. tombol navigasi bawah + panel kontennya). Fungsi ini menormalkan keduanya jadi array.
+function mokoTargetSelectors(step) {
+  if (!step.target) return [];
+  return Array.isArray(step.target) ? step.target : [step.target];
+}
+
 function mokoRenderSpotlight(step) {
   // Lepas listener sinkronisasi posisi dari step sebelumnya (kalau ada) sebelum menggambar ulang
   if (mokoRepositionCleanup) { mokoRepositionCleanup(); mokoRepositionCleanup = null; }
 
-  var oldSpot = document.getElementById('moko-spotlight');
-  if (oldSpot) oldSpot.remove();
+  // Hapus semua kotak sorotan lama (bisa lebih dari satu elemen disorot sekaligus)
+  var oldSpots = document.querySelectorAll('.moko-spotlight');
+  for (var i = 0; i < oldSpots.length; i++) oldSpots[i].remove();
 
-  // Kembalikan pointer-events elemen target sebelumnya (jika ada)
-  var prevTarget = document.getElementById('moko-active-target');
-  if (prevTarget) {
-    prevTarget.removeAttribute('id');
-    prevTarget.style.pointerEvents = '';
+  // Kembalikan pointer-events semua elemen target sebelumnya (jika ada)
+  var prevTargets = document.querySelectorAll('.moko-active-target');
+  for (var j = 0; j < prevTargets.length; j++) {
+    prevTargets[j].classList.remove('moko-active-target');
+    prevTargets[j].style.pointerEvents = '';
   }
 
-  // Update SVG overlay lubang (hapus lubang lama, buat baru tanpa lubang jika tidak ada target)
   var dim = document.getElementById('moko-dim-overlay');
-  if (dim) {
-    if (!step.target) {
-      // Tidak ada target: overlay penuh tanpa lubang
-      dim.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg"><rect width="100%" height="100%" fill="rgba(0,0,0,0.82)"/></svg>';
-      return;
-    }
+  var sels = mokoTargetSelectors(step);
+
+  if (sels.length === 0) {
+    // Tidak ada target: overlay penuh tanpa lubang
+    if (dim) dim.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg"><rect width="100%" height="100%" fill="rgba(0,0,0,0.82)"/></svg>';
+    return;
   }
 
-  if (!step.target) return;
+  var targetEls = [];
+  for (var s = 0; s < sels.length; s++) {
+    var el = document.querySelector(sels[s]);
+    if (el) targetEls.push({ el: el, sel: sels[s] });
+  }
 
-  var targetEl = document.querySelector(step.target);
-  if (!targetEl) {
+  if (targetEls.length === 0) {
     if (dim) dim.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg"><rect width="100%" height="100%" fill="rgba(0,0,0,0.82)"/></svg>';
     return;
   }
@@ -5555,22 +5566,32 @@ function mokoRenderSpotlight(step) {
   // Scroll ke target LEBIH DULU (instan, tanpa animasi) — baru ukur posisinya.
   // Kalau diukur dulu baru discroll dengan animasi 'smooth', posisi sorotan akan
   // ketinggalan/tergeser dari elemen yang sebenarnya karena scroll masih berjalan.
-  if (step.target !== '.ksb') {
-    targetEl.scrollIntoView({ behavior: 'auto', block: 'center' });
-  }
+  // Elemen fixed (mis. tombol navigasi bawah) tidak perlu discroll — posisinya selalu tetap.
+  targetEls.forEach(function(t) {
+    if (t.sel === '.ksb') return;
+    if (window.getComputedStyle(t.el).position === 'fixed') return;
+    t.el.scrollIntoView({ behavior: 'auto', block: 'center' });
+  });
 
-  var rect = targetEl.getBoundingClientRect();
-  var visible = rect.width > 0 && rect.height > 0 && rect.bottom > 0 && rect.top < window.innerHeight && rect.right > 0 && rect.left < window.innerWidth;
-  if (!visible) {
+  // Ukur & saring hanya elemen yang benar-benar terlihat di viewport
+  var rects = [];
+  targetEls.forEach(function(t) {
+    var rect = t.el.getBoundingClientRect();
+    var visible = rect.width > 0 && rect.height > 0 && rect.bottom > 0 && rect.top < window.innerHeight && rect.right > 0 && rect.left < window.innerWidth;
+    if (visible) {
+      // Nonaktifkan interaksi pada elemen target — hanya ditampilkan, tidak bisa diklik/digeser
+      t.el.classList.add('moko-active-target');
+      t.el.style.pointerEvents = 'none';
+      rects.push(rect);
+    }
+  });
+
+  if (rects.length === 0) {
     if (dim) dim.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg"><rect width="100%" height="100%" fill="rgba(0,0,0,0.82)"/></svg>';
     return;
   }
 
-  // Nonaktifkan interaksi pada elemen target — hanya ditampilkan, tidak bisa diklik/digeser
-  targetEl.id = 'moko-active-target';
-  targetEl.style.pointerEvents = 'none';
-
-  mokoDrawSpotlightBox(rect);
+  mokoDrawSpotlightBoxes(rects);
 
   // Sinkronkan ulang posisi spotlight kalau viewport berubah SETELAH digambar
   // (mis. address bar browser mobile menyembunyikan diri saat scroll, rotasi layar,
@@ -5581,20 +5602,26 @@ function mokoRenderSpotlight(step) {
 
 // Hitung ulang posisi elemen target saat ini & gambar ulang kotak sorotan + lubang overlay,
 // TANPA melakukan scroll (dipakai baik untuk render awal maupun sinkronisasi ulang).
-function mokoDrawSpotlightBox(rect) {
+// Menerima array of rect — satu lubang & satu kotak sorotan digambar per rect,
+// sehingga beberapa elemen (mis. tombol navigasi bawah + panel kontennya) bisa disorot bersamaan.
+function mokoDrawSpotlightBoxes(rects) {
   var dim = document.getElementById('moko-dim-overlay');
-
   var pad = 12;
-  var rx = Math.max(0, rect.left - pad);
-  var ry = Math.max(0, rect.top - pad);
-  var rw = rect.width + pad * 2;
-  var rh = rect.height + pad * 2;
   var r  = 14; // border-radius
-
-  // SVG overlay: kotak hitam penuh dengan lubang (cutout) di area target
-  // Teknik: fill-rule="evenodd" — path luar + path dalam = lubang
   var W = window.innerWidth;
   var H = window.innerHeight;
+
+  // SVG overlay: kotak hitam penuh dengan satu lubang (cutout) per elemen target
+  var holes = '';
+  var boxes = []; // { rx, ry, rw, rh } per target, dipakai jg utk gambar border merah
+  rects.forEach(function(rect) {
+    var rx = Math.max(0, rect.left - pad);
+    var ry = Math.max(0, rect.top - pad);
+    var rw = rect.width + pad * 2;
+    var rh = rect.height + pad * 2;
+    boxes.push({ rx: rx, ry: ry, rw: rw, rh: rh });
+    holes += '<rect x="' + rx + '" y="' + ry + '" width="' + rw + '" height="' + rh + '" rx="' + r + '" ry="' + r + '" fill="black"/>';
+  });
 
   if (dim) {
     dim.innerHTML =
@@ -5602,28 +5629,29 @@ function mokoDrawSpotlightBox(rect) {
       '<defs>' +
       '<mask id="mokoMask">' +
       '<rect width="' + W + '" height="' + H + '" fill="white"/>' +
-      '<rect x="' + rx + '" y="' + ry + '" width="' + rw + '" height="' + rh + '" rx="' + r + '" ry="' + r + '" fill="black"/>' +
+      holes +
       '</mask>' +
       '</defs>' +
       '<rect width="' + W + '" height="' + H + '" fill="rgba(0,0,0,0.82)" mask="url(#mokoMask)"/>' +
       '</svg>';
   }
 
-  // Border merah di sekitar elemen yang dijelaskan (di atas overlay SVG)
-  var spot = document.getElementById('moko-spotlight');
-  if (!spot) {
-    spot = document.createElement('div');
+  // Hapus kotak sorotan lama, gambar ulang satu per target (border merah di atas overlay SVG)
+  var oldSpots = document.querySelectorAll('.moko-spotlight');
+  for (var k = 0; k < oldSpots.length; k++) oldSpots[k].remove();
+  boxes.forEach(function(b, idx) {
+    var spot = document.createElement('div');
     spot.className = 'moko-spotlight';
-    spot.id = 'moko-spotlight';
+    spot.id = 'moko-spotlight-' + idx;
+    spot.style.left   = b.rx + 'px';
+    spot.style.top    = b.ry + 'px';
+    spot.style.width  = b.rw + 'px';
+    spot.style.height = b.rh + 'px';
     document.body.appendChild(spot);
-  }
-  spot.style.left   = rx + 'px';
-  spot.style.top    = ry + 'px';
-  spot.style.width  = rw + 'px';
-  spot.style.height = rh + 'px';
+  });
 
-  // Reposisi card Moko-chan agar tidak menutupi spotlight di mobile
-  mokoAdjustCardPosition(rect);
+  // Reposisi card Moko-chan agar tidak menutupi salah satu spotlight di mobile
+  mokoAdjustCardPosition(rects);
 }
 
 // Pasang listener yang menyinkronkan ulang posisi spotlight setiap kali viewport berubah
@@ -5635,18 +5663,22 @@ function mokoWatchSpotlightPosition() {
     if (raf) cancelAnimationFrame(raf);
     raf = requestAnimationFrame(function () {
       raf = null;
-      var targetEl = document.getElementById('moko-active-target');
+      var targetEls = document.querySelectorAll('.moko-active-target');
       var dim = document.getElementById('moko-dim-overlay');
-      if (!targetEl) return;
-      var rect = targetEl.getBoundingClientRect();
-      var visible = rect.width > 0 && rect.height > 0 && rect.bottom > 0 && rect.top < window.innerHeight && rect.right > 0 && rect.left < window.innerWidth;
-      if (!visible) {
-        var spot = document.getElementById('moko-spotlight');
-        if (spot) spot.remove();
+      if (targetEls.length === 0) return;
+      var rects = [];
+      for (var vi = 0; vi < targetEls.length; vi++) {
+        var rect = targetEls[vi].getBoundingClientRect();
+        var visible = rect.width > 0 && rect.height > 0 && rect.bottom > 0 && rect.top < window.innerHeight && rect.right > 0 && rect.left < window.innerWidth;
+        if (visible) rects.push(rect);
+      }
+      if (rects.length === 0) {
+        var spots = document.querySelectorAll('.moko-spotlight');
+        for (var si = 0; si < spots.length; si++) spots[si].remove();
         if (dim) dim.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg"><rect width="100%" height="100%" fill="rgba(0,0,0,0.82)"/></svg>';
         return;
       }
-      mokoDrawSpotlightBox(rect);
+      mokoDrawSpotlightBoxes(rects);
     });
   }
 
@@ -5672,24 +5704,32 @@ function mokoWatchSpotlightPosition() {
 }
 
 // Pastikan card tutorial tidak menutupi area spotlight, terutama di layar kecil
-function mokoAdjustCardPosition(spotRect) {
+function mokoAdjustCardPosition(rects) {
   var wrap = document.getElementById('moko-wrap');
   if (!wrap || window.innerWidth > 768) return; // hanya perlu adjust di mobile
+  if (!Array.isArray(rects)) rects = [rects];
 
   var wrapRect = wrap.getBoundingClientRect();
-  var overlaps = !(spotRect.right < wrapRect.left || spotRect.left > wrapRect.right ||
-                    spotRect.bottom < wrapRect.top || spotRect.top > wrapRect.bottom);
+  // Cek satu per satu — kalau ADA salah satu target yang beririsan dengan posisi
+  // default card, pakai rect itu utk menentukan arah pindah (bukan gabungan semua
+  // rect, supaya keputusan tetap akurat walau salah satu target adalah panel besar).
+  var overlapRect = null;
+  for (var i = 0; i < rects.length; i++) {
+    var r = rects[i];
+    var overlaps = !(r.right < wrapRect.left || r.left > wrapRect.right ||
+                      r.bottom < wrapRect.top || r.top > wrapRect.bottom);
+    if (overlaps) { overlapRect = r; break; }
+  }
+  if (!overlapRect) return;
 
-  if (overlaps) {
-    // Spotlight ada di bagian bawah layar (misal navbar/tombol) → pindahkan card ke ATAS
-    if (spotRect.top > window.innerHeight / 2) {
-      wrap.style.bottom = 'auto';
-      wrap.style.top = 'calc(12px + env(safe-area-inset-top, 0px))';
-    } else {
-      // Spotlight di bagian atas → card tetap di bawah (default)
-      wrap.style.top = 'auto';
-      wrap.style.bottom = 'calc(64px + env(safe-area-inset-bottom, 0px))';
-    }
+  // Spotlight ada di bagian bawah layar (misal navbar/tombol) → pindahkan card ke ATAS
+  if (overlapRect.top > window.innerHeight / 2) {
+    wrap.style.bottom = 'auto';
+    wrap.style.top = 'calc(12px + env(safe-area-inset-top, 0px))';
+  } else {
+    // Spotlight di bagian atas → card tetap di bawah (default)
+    wrap.style.top = 'auto';
+    wrap.style.bottom = 'calc(64px + env(safe-area-inset-bottom, 0px))';
   }
 }
 
@@ -5726,11 +5766,11 @@ function mokoNext() {
 function mokoFinish() {
   // Lepas listener sinkronisasi posisi spotlight (kalau masih aktif)
   if (mokoRepositionCleanup) { mokoRepositionCleanup(); mokoRepositionCleanup = null; }
-  // Kembalikan pointer-events elemen target terakhir
-  var lastTarget = document.getElementById('moko-active-target');
-  if (lastTarget) {
-    lastTarget.removeAttribute('id');
-    lastTarget.style.pointerEvents = '';
+  // Kembalikan pointer-events semua elemen target terakhir (bisa lebih dari satu)
+  var lastTargets = document.querySelectorAll('.moko-active-target');
+  for (var lti = 0; lti < lastTargets.length; lti++) {
+    lastTargets[lti].classList.remove('moko-active-target');
+    lastTargets[lti].style.pointerEvents = '';
   }
   // Simpan light mode sebagai preferensi permanen setelah tutorial
   isDark = false;
@@ -5749,8 +5789,8 @@ function mokoFinish() {
   if (el) el.remove();
   var dim = document.getElementById('moko-dim-overlay');
   if (dim) dim.remove();
-  var spot = document.getElementById('moko-spotlight');
-  if (spot) spot.remove();
+  var spots = document.querySelectorAll('.moko-spotlight');
+  for (var spi = 0; spi < spots.length; spi++) spots[spi].remove();
   // Tutup sidebar mobile jika masih terbuka dari step sebelumnya
   if (window.innerWidth <= 768) {
     var ksbEl = document.getElementById('ksb');
