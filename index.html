@@ -1065,6 +1065,13 @@ body.moko-active {
   user-select: none !important;
   -webkit-user-select: none !important;
 }
+/* Matikan semua animasi & transisi CSS pada elemen halaman biasa selama tutorial aktif.
+   Ini mencegah posisi elemen yang sedang dijelaskan tergeser (mis. karena transisi fade/slide)
+   dari posisi yang sudah diukur & dipakai untuk menggambar sorotan (spotlight). */
+body.moko-active *:not(#moko-wrap):not(#moko-wrap *):not(#moko-dim-overlay):not(#moko-spotlight) {
+  transition: none !important;
+  animation: none !important;
+}
 /* Semua elemen tidak bisa diklik saat tutorial, kecuali wrap tutorial itu sendiri */
 body.moko-active > *:not(#moko-wrap):not(#moko-dim-overlay):not(#moko-spotlight):not(#moko-active-target):not(#chapter-ov) {
   pointer-events: none !important;
@@ -1072,6 +1079,10 @@ body.moko-active > *:not(#moko-wrap):not(#moko-dim-overlay):not(#moko-spotlight)
 /* Modal Bab (chapter-ov) tetap bisa ditutup walau tutorial sedang aktif */
 body.moko-active #chapter-ov, body.moko-active #chapter-ov * {
   pointer-events: auto !important;
+}
+/* Menu "Lainnya" tetap tampil di atas overlay gelap saat dibuka otomatis oleh step tutorial (Kuis Bab) */
+body.moko-active .more-menu.open {
+  z-index: 9982 !important;
 }
 /* Elemen target tetap tidak bisa diklik (hanya ditampilkan) */
 body.moko-active #moko-active-target {
@@ -1643,7 +1654,7 @@ body.light .guru-hdr{background:rgba(240,244,248,.97)}
   <div class="more-menu-backdrop" onclick="closeMoreMenu()"></div>
   <div class="more-menu-panel">
     <div class="more-menu-title">Menu Lainnya</div>
-    <button class="more-menu-item" onclick="openChapterSelectForTest();closeMoreMenu()">
+    <button class="more-menu-item" id="more-kuisbab-btn" onclick="openChapterSelectForTest();closeMoreMenu()">
       <span>🏆</span><span>Kuis Bab</span>
     </button>
     <button class="more-menu-item" onclick="switchTab('list');closeMoreMenu()">
@@ -4727,13 +4738,40 @@ updateHUD();
 // Auto-login
 (function() {
   var saved = localStorage.getItem('km_curuser');
-  if (saved) {
-    var users = loadUsers();
-    if (users[saved]) { applyLogin(saved, users[saved]); return; }
+  if (!saved) { document.getElementById('reg-ov').style.display = 'flex'; return; }
+  var users = loadUsers();
+  if (!users[saved]) {
     // Stale entry — clear it
     localStorage.removeItem('km_curuser');
+    document.getElementById('reg-ov').style.display = 'flex';
+    return;
   }
-  document.getElementById('reg-ov').style.display = 'flex';
+  // Sinkronkan dulu progres dari cloud (termasuk status tutorial Moko-chan) SEBELUM login otomatis.
+  // Ini penting karena status tutorial bisa hilang dari localStorage lokal (cache dibersihkan,
+  // device/browser baru, dsb.) padahal siswa sudah menyelesaikannya — cek dulu ke Firestore
+  // supaya tutorial tidak muncul lagi walau data lokal kosong.
+  // Tunggu Firebase siap (polling, maks ~5 detik), lalu tetap lanjut pakai data lokal jika gagal/timeout.
+  var _alTries = 0;
+  var _alWaitFb = setInterval(function() {
+    _alTries++;
+    if ((window._fbDb && window._fbFns) || _alTries >= 25) {
+      clearInterval(_alWaitFb);
+      loadProgressFromCloud(saved).then(function(cloudData) {
+        if (cloudData) {
+          users[saved] = cloudData;
+          saveUsers(users);
+          if (cloudData.chapterTests) {
+            localStorage.setItem('km_chtest', JSON.stringify(cloudData.chapterTests));
+          }
+          // Sinkronkan status tutorial moko dari cloud ke penyimpanan lokal
+          if (cloudData.mokoDone) {
+            localStorage.setItem('km_moko_tutorial_done_' + saved, '1');
+          }
+        }
+        applyLogin(saved, users[saved]);
+      });
+    }
+  }, 200);
 })();
 
 
@@ -5332,7 +5370,7 @@ var MOKO_STEPS = [
   { tag: '3/9 · Navigasi Kanji', text: 'Pakai tombol "Kembali" dan "Selanjutnya" di pojok kanan atas untuk berpindah ke kanji sebelumnya atau berikutnya dalam bab yang sama.', tab: 'detail', target: '#dh-nav-bar', mobileAction: 'closeSidebar' },
   { tag: '4/9 · Flashcard', text: 'Mode Flashcard cocok untuk menghafal cepat — lihat kanji, tebak artinya, lalu balik kartu dan tandai "Belum Hafal" atau "Sudah Hafal" sesuai kemampuanmu!', tab: 'flashcard', target: '#panel-flashcard' },
   { tag: '5/9 · Latihan', text: 'Di sini kamu diuji lewat kuis pilihan ganda. Ada 5 jenis soal: Cara Baca, Arti, Tebak Kanji, Kosakata, dan Isian Kalimat. Selamat berlatih!', tab: 'quiz', target: '#panel-quiz' },
-  { tag: '6/9 · Kuis Bab', text: '🏆 Kuis Bab adalah tes resmi per bab — kamu perlu mendapat nilai MINIMAL 75% untuk membuka bab berikutnya.\n\nAkses lewat tombol "Kuis Bab" di menu Lainnya.', tab: 'detail', target: null, mobileAction: 'closeSidebar' },
+  { tag: '6/9 · Kuis Bab', text: '🏆 Kuis Bab adalah tes resmi per bab — kamu perlu mendapat nilai MINIMAL 75% untuk membuka bab berikutnya.\n\nAkses lewat tombol "Kuis Bab" di menu Lainnya.', tab: 'detail', target: '#more-kuisbab-btn', mobileAction: 'openMoreMenu' },
   { tag: '7/9 · Papan Tulis', text: 'Coba tulis kanji-nya sendiri di papan ini! Aku akan menilai jumlah goresan, arah, posisi, urutan, dan kelancaran tulisanmu. Lihat animasi goresan di tab Materi sebagai panduan.', tab: 'draw', target: '#panel-draw' },
   { tag: '8/9 · Progres & Lainnya', text: 'Menu Lainnya berisi: Progres belajarmu, Daftar lengkap kanji, Kuis Bab, dan Pengaturan aplikasi.\n\nPantau terus perkembangan belajarmu di sini!', tab: 'lms', target: '#panel-lms' },
   { tag: 'Selesai!', text: 'Sip, itu semua fitur utamanya! Ingat: belajar berurutan dari Bab 1, lulus kuis minimal 75% untuk maju ke bab berikutnya. Ganbatte! 💪🦊', tab: null, target: null, mobileAction: 'closeSidebar' }
@@ -5390,6 +5428,8 @@ function mokoRender() {
   var isMobile = window.innerWidth <= 768;
   var sidebarAnimDelay = 0;
   var ksbEl = document.getElementById('ksb');
+  var moreMenuEl = document.getElementById('more-menu');
+  var bnavMoreEl = document.getElementById('bnav-more');
   if (step.mobileAction === 'openSidebar') {
     // Buka sidebar di mobile
     if (isMobile && ksbEl && !ksbEl.classList.contains('mob-open')) {
@@ -5398,13 +5438,27 @@ function mokoRender() {
     }
     // Desktop: tampilkan sidebar (target step ini adalah .ksb)
     document.body.classList.remove('moko-hide-sidebar');
-  } else {
-    // Semua step selain openSidebar: tutup sidebar mobile dan sembunyikan sidebar desktop
+    // Pastikan menu Lainnya tertutup
+    if (moreMenuEl) moreMenuEl.classList.remove('open');
+    if (bnavMoreEl) { bnavMoreEl.classList.remove('active'); bnavMoreEl.setAttribute('aria-expanded', 'false'); }
+  } else if (step.mobileAction === 'openMoreMenu') {
+    // Tutup sidebar dulu, lalu buka menu "Lainnya" agar tombol Kuis Bab terlihat
     if (isMobile && ksbEl && ksbEl.classList.contains('mob-open')) {
       ksbEl.classList.remove('mob-open');
       sidebarAnimDelay = 320;
     }
     document.body.classList.add('moko-hide-sidebar');
+    if (moreMenuEl) moreMenuEl.classList.add('open');
+    if (bnavMoreEl) { bnavMoreEl.classList.add('active'); bnavMoreEl.setAttribute('aria-expanded', 'true'); }
+  } else {
+    // Semua step selain openSidebar/openMoreMenu: tutup sidebar mobile, sembunyikan sidebar desktop, tutup menu Lainnya
+    if (isMobile && ksbEl && ksbEl.classList.contains('mob-open')) {
+      ksbEl.classList.remove('mob-open');
+      sidebarAnimDelay = 320;
+    }
+    document.body.classList.add('moko-hide-sidebar');
+    if (moreMenuEl) moreMenuEl.classList.remove('open');
+    if (bnavMoreEl) { bnavMoreEl.classList.remove('active'); bnavMoreEl.setAttribute('aria-expanded', 'false'); }
   }
   // Khusus step yang target-nya .ksb: tampilkan sidebar
   if (step.target === '.ksb') {
@@ -5460,6 +5514,13 @@ function mokoRenderSpotlight(step) {
     return;
   }
 
+  // Scroll ke target LEBIH DULU (instan, tanpa animasi) — baru ukur posisinya.
+  // Kalau diukur dulu baru discroll dengan animasi 'smooth', posisi sorotan akan
+  // ketinggalan/tergeser dari elemen yang sebenarnya karena scroll masih berjalan.
+  if (step.target !== '.ksb') {
+    targetEl.scrollIntoView({ behavior: 'auto', block: 'center' });
+  }
+
   var rect = targetEl.getBoundingClientRect();
   var visible = rect.width > 0 && rect.height > 0 && rect.bottom > 0 && rect.top < window.innerHeight && rect.right > 0 && rect.left < window.innerWidth;
   if (!visible) {
@@ -5505,11 +5566,6 @@ function mokoRenderSpotlight(step) {
   spot.style.width  = rw + 'px';
   spot.style.height = rh + 'px';
   document.body.appendChild(spot);
-
-  // Scroll target ke tengah layar agar tetap terlihat
-  if (step.target !== '.ksb') {
-    targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  }
 
   // Reposisi card Moko-chan agar tidak menutupi spotlight di mobile
   mokoAdjustCardPosition(rect);
@@ -5582,6 +5638,11 @@ function mokoFinish() {
   document.body.classList.remove('moko-active');
   document.body.classList.remove('moko-hide-sidebar');
   document.body.style.overflow = '';
+  // Tutup menu "Lainnya" jika sempat dibuka otomatis oleh step Kuis Bab
+  var moreMenuFinishEl = document.getElementById('more-menu');
+  if (moreMenuFinishEl) moreMenuFinishEl.classList.remove('open');
+  var bnavMoreFinishEl = document.getElementById('bnav-more');
+  if (bnavMoreFinishEl) { bnavMoreFinishEl.classList.remove('active'); bnavMoreFinishEl.setAttribute('aria-expanded', 'false'); }
   var el = document.getElementById('moko-wrap');
   if (el) el.remove();
   var dim = document.getElementById('moko-dim-overlay');
